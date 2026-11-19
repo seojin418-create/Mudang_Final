@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.DS_Store
+# 편집기가 남기는 직전 파일
+data/*.prev.csv

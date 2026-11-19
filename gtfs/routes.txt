@@ -1,0 +1,2 @@
+"route_id","agency_id","route_short_name","route_long_name","route_type"
+"MUDANG","GACHON","무당이","반도체대학–교육대학원–학생회관–AI공학관–중앙도서관–예체대–글로벌센터–반도체대학","3"

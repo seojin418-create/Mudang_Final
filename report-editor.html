@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="최종보고서 본문을 고치고 워드 파일로 저장합니다" />
+  <title>보고서 편집기</title>
+  <style>
+    :root { --bg: #efeee9; --paper: #fff; --text: #1d1d1b; --muted: #6e6d67; --line: #dddcd5;
+      --accent: #b8402f; --ok: #1e7b45; --soft: #f6f5f0; --hover: #faf9f5; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #161615; --paper: #22221f; --text: #ecebe6; --muted: #a3a29b;
+      --line: #3a3934; --accent: #e57361; --ok: #5cc28a; --soft: #2a2a26; --hover: #262623; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.6 system-ui, "Malgun Gothic", sans-serif; }
+    .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      padding: 10px 16px; background: var(--paper); border-bottom: 1px solid var(--line); }
+    .bar h1 { font-size: 15px; margin: 0 12px 0 0; }
+    .bar .grow { flex: 1; }
+    button { font: inherit; border: 1px solid var(--line); background: var(--paper); color: var(--text);
+      border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .status { color: var(--muted); font-size: 13px; }
+    .status.ok { color: var(--ok); } .status.err { color: var(--accent); }
+    .layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; max-width: 1240px; margin: 16px auto; padding: 0 16px; }
+    /* 좁은 창에서는 메모를 본문 위에 두고, 화면에 붙어 따라다니지 않게 해 본문과 겹치지 않게 합니다. */
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .side { order: -1; position: static; max-height: none; } }
+    .paper { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 40px 48px 80px; min-height: 80vh; }
+    @media (max-width: 600px) { .paper { padding: 20px 12px 60px; } }
+    .block { position: relative; display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: start;
+      border-radius: 4px; padding: 2px 0; }
+    .block:hover, .block:focus-within { background: var(--hover); }
+    .kind { font-size: 11px; color: var(--muted); border: none; background: transparent; padding: 4px 0; width: 64px; cursor: pointer; }
+    textarea { width: 100%; resize: none; overflow: hidden; border: 1px solid transparent; border-radius: 4px;
+      background: transparent; color: inherit; font: 15px/1.8 "Malgun Gothic", "Apple SD Gothic Neo", serif; padding: 2px 6px; }
+    textarea:focus { outline: none; border-color: var(--line); background: var(--paper); }
+    .chapter textarea { font-size: 19px; font-weight: 700; margin-top: 18px; }
+    .section textarea { font-size: 16px; font-weight: 700; margin-top: 8px; }
+    .body textarea { text-indent: 0.6em; }
+    .blank textarea { height: 18px; font-size: 10px; color: var(--muted); }
+    .table textarea, .figure textarea { text-align: center; font-weight: 700; font-size: 13px; }
+    .table textarea.cells { text-align: left; font: 13px/1.6 Consolas, "Malgun Gothic", monospace; font-weight: 400;
+      background: var(--soft); border-color: var(--line); margin-top: 4px; }
+    .figure .pick { font: inherit; font-size: 12px; margin: 4px 0; }
+    .figure .preview { display: block; max-width: 70%; margin: 4px auto; border: 1px solid var(--line); }
+    .chapter .num { position: absolute; left: 72px; top: 24px; font-weight: 700; font-size: 19px; }
+    .chapter textarea { padding-left: 30px; }
+    .tools { position: absolute; right: 4px; top: -14px; display: none; gap: 2px; background: var(--paper);
+      border: 1px solid var(--line); border-radius: 6px; padding: 2px; z-index: 2; }
+    .block:hover .tools, .block:focus-within .tools { display: flex; }
+    .tools button { border: none; padding: 1px 7px; font-size: 12px; color: var(--muted); }
+    .tools button:hover { color: var(--text); background: var(--soft); }
+    .side { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow: auto;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+    .side h2 { font-size: 14px; margin: 0 0 8px; }
+    .side pre { white-space: pre-wrap; font: 12.5px/1.6 system-ui, "Malgun Gothic", sans-serif; color: var(--muted); margin: 0; }
+    .stats { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+    .stats strong { color: var(--text); }
+    .warn { color: var(--accent); }
+    .help { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <h1>최종보고서 편집기</h1>
+    <button class="primary" id="save" title="Ctrl+S">워드로 저장</button>
+    <button id="pages" title="워드로 실제 쪽수를 셉니다(10초쯤 걸림)">쪽수 확인</button>
+    <button id="reload" title="원본 워드 파일에서 다시 읽습니다. 저장하지 않은 초안은 사라집니다.">원본 워드에서 다시 불러오기</button>
+    <span class="grow"></span>
+    <span class="status" id="status"></span>
+  </div>
+  <div class="layout">
+    <main class="paper" id="paper" aria-label="보고서 본문"></main>
+    <aside class="side">
+      <div class="stats" id="stats"></div>
+      <details><summary class="help">사용법</summary><p class="help">표지와 목차는 그대로 두고 본문만 고칩니다. 고치는 동안 초안이 자동으로 저장되고, "워드로 저장"을 누르면 final_project/최종보고서_편집본.docx가 만들어집니다. 원본 최종보고서.docx는 바뀌지 않습니다. Enter를 누르면 커서 위치에서 문단이 나뉘고, Shift+Enter는 문단 안 줄바꿈입니다. 표는 한 줄이 한 행이고 칸은 | 로 나눕니다. 그림은 final_project/figures의 파일을 고릅니다.</p></details>
+      <details><summary><h2 style="display:inline">뼈대 메모 (report_outline.md)</h2></summary>
+      <pre id="outline">불러오는 중…</pre></details>
+    </aside>
+  </div>
+  <script type="module" src="/src/report-editor.js"></script>
+</body>
+</html>

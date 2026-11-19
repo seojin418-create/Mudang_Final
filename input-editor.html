@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="운행 조건·수요·목적지 비율을 표에서 고치고 data/의 CSV에 저장합니다" />
+  <title>무당이 입력값 편집</title>
+  <style>
+    :root { --bg: #f7f7f5; --panel: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #deddd8;
+      --accent: #c0392b; --ok: #1e7b45; --warn: #b7791f; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #171716; --panel: #22221f; --text: #ecebe6;
+      --muted: #a3a29b; --line: #3a3934; --accent: #e57361; --ok: #5cc28a; --warn: #e0b04f; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, "Malgun Gothic", sans-serif; }
+    header { padding: 20px 16px 8px; max-width: 1200px; margin: auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    header p { margin: 0; color: var(--muted); }
+    main { max-width: 1200px; margin: auto; padding: 8px 16px 40px; display: grid; gap: 16px; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    section h2 { font-size: 16px; margin: 0 0 2px; }
+    .hint { color: var(--muted); margin: 0 0 12px; }
+    .scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 760px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: middle; }
+    th { font-weight: 600; color: var(--muted); font-size: 12px; }
+    td.label { white-space: nowrap; }
+    td.label small { display: block; color: var(--muted); font-size: 11px; }
+    input, select { width: 100%; font: inherit; color: inherit; background: transparent;
+      border: 1px solid transparent; border-radius: 4px; padding: 3px 5px; }
+    input:hover, select:hover { border-color: var(--line); }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    tr.changed td { background: color-mix(in srgb, var(--warn) 10%, transparent); }
+    .narrow { width: 90px; } .mid { width: 120px; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+    button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+      border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    button.del { border: none; color: var(--muted); padding: 2px 6px; }
+    .status { color: var(--muted); white-space: pre-wrap; }
+    .status.ok { color: var(--ok); } .status.err { color: var(--accent); }
+    .sums { display: flex; gap: 12px; flex-wrap: wrap; }
+    .sum.bad { color: var(--accent); font-weight: 600; } .sum.good { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>무당이 입력값 편집</h1>
+    <p>칸을 고치고 표마다 저장하세요. 저장하면 data 폴더의 CSV가 바뀌고, 직전 파일은 *.prev.csv로 남습니다. 정류장 위치는 <a href="/stop-editor.html">정류장 편집기</a>에서 고칩니다.</p>
+  </header>
+  <main>
+    <section id="service"></section>
+    <section id="demand"></section>
+    <section id="destinations"></section>
+  </main>
+  <script type="module" src="/src/input-editor.js"></script>
+</body>
+</html>
