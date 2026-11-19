@@ -46,7 +46,7 @@ npm run dev
 ```sh
 npm run build-gtfs                # data/ → gtfs/ 시간표 생성
 node scripts/calibrate-demand.mjs # 체감 대기 → 도착 인원 (data/demand.csv의 people)
-node scripts/check-queue.mjs      # 체감 대기와 시뮬레이션 대기 비교
+node scripts/check-queue.mjs      # 체감 대기와 시뮬레이션 대기 비교, 13~16시 대기시간(보고서 표 4-1)
 node scripts/summary.mjs          # 시나리오별 평균 결과 → results/summary.json
 node scripts/sensitivity.mjs      # 민감도 분석 → results/sensitivity.csv
 node scripts/rest-check.mjs       # 기사 휴식 시간대별 확인

@@ -56,4 +56,24 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replaceAll('\\',
     console.log(`${route.visits.find(v => v.stopId === r.origin).name} ${span}  도착 ${r.people}명 · 체감 ${r.felt}명`
       + ` · 시뮬레이션 평균 ${r.mean.toFixed(1)}명 · 최대 ${r.max}명`);
   }
+
+  // 보고서 표 4-1: 이용 기록이 13~16시에 몰려 있어, 이 시간대에 정류장에 온 학생이 탈 때까지 기다린 시간을
+  // 무작위 값 다섯 가지(summary.mjs와 같은 값)로 돌린 평균과 비교합니다.
+  const seeds = [42, 7, 101, 2024, 9];
+  const from = seconds('13:00:00') - route.start, to = seconds('16:00:00') - route.start;
+  const waits = seeds.map(seed => {
+    const r = simulate({ route, duration, snapshotEvery: duration, fleetSize: fleet, capacity: Number(service.capacity),
+      demand: windowDemand(route, windows, shares, duration, { scale: Number(percent) / 100, seed }),
+      departures: headwayDepartures(duration, headway).slice(0, fleet),
+      travelTime: (leg, time) => timetableETA(route, leg, time), terminal: { dwell: Number(service.terminal_dwell) },
+      hold: { stop: holdStop, rule, dwell: Number(service.dwell), headway, running: 1, minRest: 0 } });
+    const wait = stop => {
+      const p = r.passengers.filter(x => x.origin === stop && x.boardedAt != null && x.arrival >= from && x.arrival < to);
+      return p.reduce((t, x) => t + x.boardedAt - x.arrival, 0) / p.length / 60;
+    };
+    return [wait(0), wait(holdStop)];
+  });
+  const mean = k => (waits.reduce((t, w) => t + w[k], 0) / waits.length).toFixed(1);
+  console.log(`\n13~16시 탈 때까지 기다린 시간 (무작위 값 ${seeds.length}가지 평균): `
+    + `${route.visits[0].name} ${mean(0)}분 · ${route.visits[holdStop].name} ${mean(1)}분`);
 }
