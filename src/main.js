@@ -50,6 +50,13 @@ $('#app').innerHTML = `
 <main>
   <section class="intro"><div><p class="eyebrow">GACHON · SHUTTLE SIMULATION</p><h1>AI공학관 출발 규칙 개선 시뮬레이션</h1><p>현황과 제안의 차량 이동, 정류장별 대기, 학생 대기시간과 기사 휴식을 비교합니다.</p></div><span class="period">평일 운행 (반도체대학 기준)<br><strong>${clock(0)} — ${clock(duration)}</strong></span></section>
   <div class="notice"><span class="notice-dot"></span><p><strong>시간표는 data/의 관측·가정 값으로 만들었고, 수요는 본인 체감(반도체대학·AI공학관의 매시 시간대별 대기, 아침·저녁 대기)입니다.</strong> ${route.visits.map(v => v.name).join(' → ')} 순환 노선입니다. ${route.visits[0].name}에서는 ${service.terminal_dwell / 60}분 태우고 인원과 관계없이 바로 출발하며, ${route.visits[holdStop].name}의 출발 방식은 아래 규칙으로 비교합니다.</p></div>
+  <section class="panel proposal"><p class="eyebrow">제안별 효과 · 무작위 값 ${summary.seeds.length}가지 평균 (보고서 6장과 같은 값)</p>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab" data-tab="1">제안 1 · 만차 + 최소 휴식 5분</button>
+      <button type="button" role="tab" class="tab" data-tab="2">제안 2 · 기사 교대 (휴게 공간 + 기사 1명)</button>
+    </div>
+    <div id="proposal-body"></div>
+  </section>
   <div class="workspace">
     <aside class="panel controls"><p class="eyebrow">01 / 실험 조건</p><h2>운행 설정</h2>
       <form id="controls">
@@ -101,6 +108,45 @@ $('#app').innerHTML = `
     </div>
   </div>
 </main>`;
+
+// 제안 탭: 현황과 선택한 제안을 학생 대기와 기사 휴식으로 나란히 비교합니다.
+const proposalNotes = {
+  1: `${route.visits[holdStop].name}에서 만차이고 도착 후 5분 이상 쉰 무당이는 시간표(앞차 출발 5분 뒤)를 기다리지 않고 바로 출발합니다. 출발 규칙만 바꾸므로 추가 비용이 없습니다.`,
+  2: `제안 1에 더해 ${route.visits[holdStop].name}에 기사 휴게 공간을 만들고 기사를 1명 늘립니다. 차가 도착하면 기사는 내려서 쉬고, 가장 오래 쉰 기사가 차를 몰고 나갑니다. 만차로 일찍 떠날 때도 5분 이상 쉰 기사가 탑니다.`,
+};
+const proposalMetrics = [
+  ['학생', '평균 대기시간', 'meanWait', '분', 'low'],
+  ['학생', '90분위 대기시간', 'p90Wait', '분', 'low'],
+  ['학생', '반도체대학 평균 대기', 'semiWait', '분', 'low'],
+  ['학생', `${route.visits[holdStop].name} 도착부터 출발까지`, 'aiDepart', '분', 'low'],
+  ['학생', '평균 통행시간 (대기 포함)', 'meanTravel', '분', 'low'],
+  ['기사', '1명당 시간당 휴식', 'restPerHour', '분', 'high'],
+  ['기사', '5분 이상 쉰 비율', 'restOver5', '%', 'high'],
+  ['기사', '5분 이상 못 쉬고 계속 운행한 최장 시간', 'longestDrive', '분', 'low'],
+];
+function showProposal(index) {
+  const base = summary.rows[0], plan = summary.rows[index];
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === String(index))));
+  const group = who => proposalMetrics.filter(m => m[0] === who).map(([, label, key, unit, better]) => {
+    const a = base[key], b = plan[key], max = Math.max(a, b) || 1;
+    const change = a ? (b - a) / a * 100 : 0;
+    const good = better === 'low' ? b < a : b > a;
+    const fmt = v => unit === '%' ? `${v.toFixed(0)}%` : `${v.toFixed(1)}분`;
+    return `<div class="metric-row"><div class="metric-label">${label}</div>
+      <div class="bars"><div class="bar-line"><span class="bar-name">현황</span><span class="bar base" style="width:${a / max * 100}%"></span><b>${fmt(a)}</b></div>
+      <div class="bar-line"><span class="bar-name">제안 ${index}</span><span class="bar plan" style="width:${b / max * 100}%"></span><b>${fmt(b)}</b></div></div>
+      <div class="change ${Math.abs(change) < 0.5 ? '' : good ? 'good' : 'bad'}">${Math.abs(change) < 0.5 ? '같음' : `${change > 0 ? '+' : ''}${change.toFixed(0)}%`}</div></div>`;
+  }).join('');
+  $('#proposal-body').innerHTML = `<p class="help proposal-note">${proposalNotes[index]} 기사는 현황 ${base.drivers}명, 제안 ${index} ${plan.drivers}명입니다.</p>
+    <div class="proposal-grid"><div><h3>학생 대기시간</h3>${group('학생')}</div><div><h3>기사 휴식시간</h3>${group('기사')}</div></div>`;
+}
+document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+  showProposal(Number(tab.dataset.tab));
+  // 아래 지도 재생도 같은 제안으로 바꿔 다시 계산합니다.
+  $('#rule').value = tab.dataset.tab === '1' ? 'headwayFull' : 'swap';
+  run();
+}));
+showProposal(1);
 
 const routeMap = createRouteMap(network, paths, route.visits, stopNodes, colors);
 
