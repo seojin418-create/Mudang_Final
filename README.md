@@ -54,7 +54,7 @@ node scripts/trace-lap.mjs headway 12:00 0   # 차 한 대의 한 바퀴 기록
 npm test                          # 시뮬레이션 규칙 테스트
 ```
 
-보고서 그림은 `node scripts/export-route.mjs` 다음에 `python scripts/figures.py`로 만듭니다(Python, matplotlib 필요).
+보고서 그림 2-1과 4-1은 `node scripts/export-route.mjs` 다음에 `python scripts/figures.py`로 만들며, `figures/`에 저장됩니다(Python, matplotlib 필요).
 
 ## 폴더
 

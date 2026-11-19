@@ -1,4 +1,4 @@
-"""보고서 그림을 만듭니다. 결과는 final_project/figures/에 PNG로 저장합니다.
+"""보고서 그림(그림 2-1, 그림 4-1)을 만듭니다. 결과는 figures/에 PNG로 저장합니다.
 
 사용: node scripts/export-route.mjs  →  python scripts/figures.py
 """
@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-OUT = ROOT.parent / 'final_project' / 'figures'
+OUT = ROOT / 'figures'
 OUT.mkdir(parents=True, exist_ok=True)
 plt.rcParams['font.family'] = 'Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
@@ -120,43 +120,6 @@ def queue_profile():
     return path
 
 
-def scenario_compare():
-    """그림 6-1: 시나리오별 정류장 대기와 기사 휴식 (시드 5개 평균, scripts 결과에서 옮겨 적은 값)."""
-    names = ['현황', '제안 1', '제안 2', '만차 즉시\n(참고)']
-    semi = [11.1, 3.0, 2.9, 2.9]          # 반도체대학 평균 대기(분)
-    ai = [13.8, 2.7, 2.4, 2.3]            # AI공학관 도착부터 출발까지(분)
-    rest = [23.0, 19.6, 27.4, 19.0]       # 기사당 휴식(분/시)
-    longest = [34, 34, 21, 61]            # 5분 이상 쉬지 못한 최장 연속 운행(분)
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.4, 3.0), dpi=220)
-    x = range(len(names)); w = 0.38
-    b1 = a1.bar([i - w / 2 for i in x], semi, w, color=UP, label='반도체대학 대기')
-    b2 = a1.bar([i + w / 2 for i in x], ai, w, color='#7fb3c4', label='AI공학관 출발까지')
-    for bars in (b1, b2):
-        for r in bars:
-            a1.text(r.get_x() + r.get_width() / 2, r.get_height() + 0.3, f'{r.get_height():.1f}', ha='center', fontsize=7.5, color=INK)
-    a1.set_title('학생: 평균 대기시간 (분)', fontsize=9.5, color=INK)
-    a1.legend(fontsize=7.5, frameon=False)
-    colors = [MUTED, UP, '#1e7b45', DOWN]
-    b3 = a2.bar(list(x), rest, 0.55, color=colors)
-    for r, l in zip(b3, longest):
-        a2.text(r.get_x() + r.get_width() / 2, r.get_height() + 0.5, f'{r.get_height():.1f}분', ha='center', fontsize=7.5, color=INK)
-        a2.text(r.get_x() + r.get_width() / 2, 1.2, f'최장\n{l}분', ha='center', fontsize=7, color='white')
-    a2.set_title('기사님: 1명당 시간당 휴식 (분)', fontsize=9.5, color=INK)
-    for ax in (a1, a2):
-        ax.set_xticks(list(x)); ax.set_xticklabels(names, fontsize=8)
-        ax.tick_params(labelsize=8, colors=MUTED)
-        ax.grid(axis='y', color='#e6e4dd', lw=0.8); ax.set_axisbelow(True)
-        for side in ('top', 'right'):
-            ax.spines[side].set_visible(False)
-    a2.set_ylim(0, 32)
-    fig.tight_layout()
-    path = OUT / '그림6-1_시나리오_비교.png'
-    fig.savefig(path)
-    plt.close(fig)
-    return path
-
-
 if __name__ == '__main__':
     print(route_map())
     print(queue_profile())
-    print(scenario_compare())

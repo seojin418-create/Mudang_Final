@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite';
-import { copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { tmpdir } from 'node:os';
 import { csv } from './src/gtfs.js';
 
 const root = fileURLToPath(new URL('.', import.meta.url));
@@ -77,76 +76,11 @@ function saveData() {
   };
 }
 
-// 보고서 편집기: final_project/최종보고서.docx 본문을 읽고, 편집한 내용을 초안(report-draft.json)과
-// 새 워드 파일(최종보고서_편집본.docx)로 저장합니다. 원본 워드 파일은 바꾸지 않습니다.
-const project = `${root}../final_project/`;
-const reportFiles = { source: `${project}최종보고서.docx`, output: `${project}최종보고서_편집본.docx`,
-  draft: `${project}report-draft.json`, outline: `${project}report_outline.md` };
-const python = (args, input) => execFileSync('python', ['-I', `${root}scripts/report_docx.py`, ...args],
-  { cwd: root, encoding: 'utf8', input, env: { ...process.env, PYTHONUTF8: '1' } });
-function reportEditor() {
-  return {
-    name: 'report-editor',
-    configureServer(server) {
-      server.middlewares.use('/api/report', (req, res) => {
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        const [path, query = ''] = req.url.split('?');
-        const fail = error => { res.statusCode = 400; res.end(JSON.stringify({ error: String(error.stderr || error.message).trim() })); };
-        if (req.method === 'GET') {
-          try {
-            if (path === '/outline') { res.end(JSON.stringify({ text: readFileSync(reportFiles.outline, 'utf8') })); return; }
-            // 그림 목록과 그림 파일: final_project/figures의 PNG·JPG
-            if (path === '/figures') {
-              const list = existsSync(`${project}figures`) ? readdirSync(`${project}figures`).filter(f => /\.(png|jpe?g)$/i.test(f)) : [];
-              res.end(JSON.stringify({ files: list })); return;
-            }
-            if (path.startsWith('/figure/')) {
-              const name = decodeURIComponent(path.slice('/figure/'.length));
-              if (name.includes('/') || name.includes('\\') || !existsSync(`${project}figures/${name}`)) { res.statusCode = 404; res.end('{}'); return; }
-              res.setHeader('Content-Type', /\.png$/i.test(name) ? 'image/png' : 'image/jpeg');
-              res.end(readFileSync(`${project}figures/${name}`)); return;
-            }
-            const fresh = query.includes('fresh=1') || !existsSync(reportFiles.draft);
-            const data = fresh ? JSON.parse(python(['read', reportFiles.source])) : JSON.parse(readFileSync(reportFiles.draft, 'utf8'));
-            res.end(JSON.stringify({ ...data, from: fresh ? 'docx' : 'draft' }));
-          } catch (error) { fail(error); }
-          return;
-        }
-        let body = '';
-        req.setEncoding('utf8');
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
-          try {
-            // 편집기는 블록만 보내므로, 초안에 있던 목차 수정(toc) 같은 다른 값은 그대로 이어 둡니다.
-            const previous = existsSync(reportFiles.draft) ? JSON.parse(readFileSync(reportFiles.draft, 'utf8')) : {};
-            const data = { ...previous, ...JSON.parse(body) };
-            if (!Array.isArray(data.blocks)) throw new Error('블록이 없습니다.');
-            writeFileSync(reportFiles.draft, JSON.stringify({ ...data, savedAt: new Date().toISOString() }, null, 1));
-            if (path === '/draft') { res.end(JSON.stringify({ draft: reportFiles.draft })); return; }
-            if (path === '/save') { res.end(python(['write', reportFiles.source, reportFiles.output], JSON.stringify(data))); return; }
-            // 쪽수 확인: 임시 워드 파일을 만들어 워드로 실제 쪽수를 셉니다(표지·목차 포함).
-            if (path === '/pages') {
-              const temp = `${tmpdir()}/mudang-report-pages.docx`;
-              python(['write', reportFiles.source, temp], JSON.stringify(data));
-              const pages = execFileSync('powershell', ['-NoProfile', '-File', `${root}scripts/count-pages.ps1`, temp], { encoding: 'utf8' }).trim();
-              res.end(JSON.stringify({ pages: Number(pages) })); return;
-            }
-            res.statusCode = 404; res.end('{}');
-          } catch (error) {
-            fail(/EBUSY|Permission denied|PermissionError/.test(String(error.stderr || error.message))
-              ? new Error('최종보고서_편집본.docx가 워드에서 열려 있습니다. 워드에서 닫은 뒤 다시 저장해 주세요.') : error);
-          }
-        });
-      });
-    },
-  };
-}
-
 // GitHub Pages로 올릴 때(PAGES_BASE가 있을 때)는 대시보드만 빌드합니다. 편집기는 내 컴퓨터의 개발 서버에서만 저장되기 때문입니다.
 const pages = process.env.PAGES_BASE;
 export default defineConfig({
   base: pages ?? '/',
-  plugins: [saveStops(), saveData(), reportEditor()],
+  plugins: [saveStops(), saveData()],
   build: { rollupOptions: { input: pages ? { main: `${root}index.html` } : { main: `${root}index.html`,
-    editor: `${root}stop-editor.html`, inputs: `${root}input-editor.html`, report: `${root}report-editor.html` } } },
+    editor: `${root}stop-editor.html`, inputs: `${root}input-editor.html` } } },
 });
