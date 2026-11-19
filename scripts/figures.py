@@ -90,30 +90,34 @@ def route_map():
 
 
 def queue_profile():
-    """그림 4-1: 9:30~17:30 매시 분별 평균 대기 인원(시뮬레이션)과 체감 대기."""
+    """그림 4-1: 9:30~17:30 매시 20분 구간별 평균 대기 인원, 체감과 시뮬레이션을 막대로 나란히 비교합니다."""
     prof = json.loads((ROOT / 'results' / 'queue-profile.json').read_text(encoding='utf-8'))
-    felt = {'ST01': [(0, 20, 36), (20, 40, 18), (40, 60, 63)], 'ST04': [(0, 20, 54), (20, 40, 36), (40, 60, 63)]}
-    names = {'ST01': '반도체대학 (밖에서 기다리는 학생)', 'ST04': 'AI공학관 (쉬는 차에 탄 학생 포함)'}
-    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.1), dpi=220, sharey=True)
+    felt = {'ST01': [36, 18, 63], 'ST04': [54, 36, 63]}
+    names = {'ST01': '반도체대학', 'ST04': 'AI공학관 (쉬는 차에 탄 학생 포함)'}
+    spans = ['00~20분', '20~40분', '40~00분']
+    fig, axes = plt.subplots(1, 2, figsize=(7.4, 3.0), dpi=220, sharey=True)
     for ax, stop in zip(axes, ['ST01', 'ST04']):
-        for a, b, v in felt[stop]:
-            ax.plot([a, b], [v, v], color=DOWN, lw=2.4, solid_capstyle='butt', label='체감' if a == 0 else None)
-        ax.plot(prof['minute'], prof[stop], color=UP, lw=1.8, label='시뮬레이션 (현황)')
+        sim = [sum(prof[stop][a:a + 20]) / 20 for a in (0, 20, 40)]
+        x = range(3); w = 0.36
+        # 눈에 덜 튀도록 체감은 연한 회색, 시뮬레이션은 차분한 짙은 청록으로 둡니다.
+        b1 = ax.bar([i - w / 2 for i in x], felt[stop], w, color='#c8ccc4', label='체감')
+        b2 = ax.bar([i + w / 2 for i in x], sim, w, color='#3f6f68', label='시뮬레이션 (현황)')
+        for bars in (b1, b2):
+            for r in bars:
+                ax.text(r.get_x() + r.get_width() / 2, r.get_height() + 1, f'{r.get_height():.0f}', ha='center', fontsize=8, color=INK)
         ax.set_title(names[stop], fontsize=9.5, color=INK)
-        ax.set_xticks([0, 20, 40, 60]); ax.set_xlim(0, 60); ax.set_ylim(0, 80)
-        ax.set_xlabel('매시 분', fontsize=8.5, color=MUTED)
-        ax.tick_params(labelsize=8, colors=MUTED)
+        ax.set_xticks(list(x)); ax.set_xticklabels([f'매시 {s}' for s in spans], fontsize=8)
+        ax.set_ylim(0, 75); ax.tick_params(labelsize=8, colors=MUTED)
         ax.grid(axis='y', color='#e6e4dd', lw=0.8); ax.set_axisbelow(True)
         for side in ('top', 'right'):
             ax.spines[side].set_visible(False)
-    axes[0].set_ylabel('대기 인원 (명)', fontsize=8.5, color=MUTED)
-    axes[1].legend(fontsize=8, frameon=False, loc='lower right')
+    axes[0].set_ylabel('평균 대기 인원 (명)', fontsize=8.5, color=MUTED)
+    axes[0].legend(fontsize=8, frameon=False, loc='upper left')
     fig.tight_layout()
     path = OUT / '그림4-1_분별_대기인원.png'
     fig.savefig(path)
     plt.close(fig)
     return path
-
 
 
 def scenario_compare():
