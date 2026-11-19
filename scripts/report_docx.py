@@ -123,8 +123,13 @@ def fix_toc(paragraphs, start, toc):
                 p._p.pPr.remove(p._p.pPr.numPr)
 
 
-def write(src, dst, blocks, toc=None):
+def write(src, dst, blocks, toc=None, layout=None):
     document = load(src)
+    # layout.line_spacing: 문서 기본 줄 간격(배수, 예 1.3 = 130%). 원본은 1.4입니다.
+    if layout and layout.get('line_spacing'):
+        spacing = document.styles.element.find(qn('w:docDefaults')).find(qn('w:pPrDefault')).find(qn('w:pPr')).find(qn('w:spacing'))
+        spacing.set(qn('w:line'), str(round(240 * float(layout['line_spacing']))))
+        spacing.set(qn('w:lineRule'), 'auto')
     paragraphs = document.paragraphs
     start = body_start(paragraphs)
     fix_toc(paragraphs, start, toc)
@@ -180,6 +185,8 @@ def write(src, dst, blocks, toc=None):
                 cell.text = row[j].strip() if j < len(row) else ''
                 for paragraph in cell.paragraphs:
                     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    # 작은 표는 쪽을 넘어가며 나뉘지 않게 마지막 행 전까지 다음 행과 붙여 둡니다.
+                    paragraph.paragraph_format.keep_with_next = i < len(rows) - 1
                     for run in paragraph.runs:
                         run.font.size = Pt(9.5)
                         run.bold = i == 0
@@ -223,6 +230,9 @@ def write(src, dst, blocks, toc=None):
                 paragraph.paragraph_format.first_line_indent = Cm(0)
             else:
                 paragraph.paragraph_format.first_line_indent = Pt(11)
+        # 장·절 제목이 쪽 끝에 홀로 남지 않도록 다음 문단과 같은 쪽에 둡니다.
+        if block['kind'] in ('chapter', 'section'):
+            paragraph.paragraph_format.keep_with_next = True
         if paragraph.text != text:
             set_text(paragraph, text)
         built.append(element)
@@ -245,6 +255,6 @@ if __name__ == '__main__':
         print(json.dumps(read(sys.argv[2]), ensure_ascii=False))
     elif command == 'write':
         data = json.load(sys.stdin)
-        print(json.dumps(write(sys.argv[2], sys.argv[3], data['blocks'], data.get('toc')), ensure_ascii=False))
+        print(json.dumps(write(sys.argv[2], sys.argv[3], data['blocks'], data.get('toc'), data.get('layout')), ensure_ascii=False))
     else:
         raise SystemExit('read 또는 write를 씁니다.')
