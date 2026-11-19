@@ -18,17 +18,20 @@ export function createRouteMap(network, paths, visits, stopNodes, colors) {
       roads: { type: 'geojson', data: collection(network.edges.map(e => line([coordinate(e.from), coordinate(e.to)]))) },
       route: { type: 'geojson', data: collection(paths.map(p => line(p.nodes.map(coordinate)))) },
     }, layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#edf1e9' } },
-      { id: 'basemap', type: 'raster', source: 'osm', paint: { 'raster-opacity': 0.7 } },
-      { id: 'buildings', type: 'fill', source: 'buildings', paint: { 'fill-color': '#bbc6bf', 'fill-opacity': 0.55 } },
-      { id: 'roads', type: 'line', source: 'roads', paint: { 'line-color': '#fff', 'line-width': 5 } },
-      { id: 'route-border', type: 'line', source: 'route', paint: { 'line-color': '#fff', 'line-width': 9 } },
-      { id: 'route', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#187e79', 'line-width': 5 } },
+      // 다크 화면에 맞춰 배경 지도를 흑백으로 어둡게 바꿉니다.
+      { id: 'background', type: 'background', paint: { 'background-color': '#14181b' } },
+      { id: 'basemap', type: 'raster', source: 'osm', paint: { 'raster-saturation': -1, 'raster-brightness-min': 0.95, 'raster-brightness-max': 0.05, 'raster-contrast': 0.15, 'raster-opacity': 0.85 } },
+      { id: 'buildings', type: 'fill', source: 'buildings', paint: { 'fill-color': '#2a3137', 'fill-opacity': 0.6 } },
+      { id: 'roads', type: 'line', source: 'roads', paint: { 'line-color': '#3a434b', 'line-width': 4 } },
+      { id: 'route-border', type: 'line', source: 'route', paint: { 'line-color': '#14181b', 'line-width': 8 } },
+      { id: 'route', type: 'line', source: 'route', layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': '#6fb7a8', 'line-width': 4 } },
     ] } });
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
   const bounds = new maplibregl.LngLatBounds();
   paths.flatMap(p => p.nodes).forEach(id => bounds.extend(coordinate(id)));
-  map.fitBounds(bounds, { padding: { top: 70, bottom: 60, left: 70, right: 70 }, duration: 0 });
+  const fit = () => map.fitBounds(bounds, { padding: { top: 70, bottom: 60, left: 70, right: 70 }, duration: 0 });
+  // 화면 배치가 끝난 뒤 크기가 정해지므로 불러온 다음에 한 번 더 맞춥니다.
+  fit(); map.once('load', () => { map.resize(); fit(); });
   const queues = visits.slice(0, -1).map(v => {
     const element = document.createElement('div'); element.className = 'stop-marker';
     const name = document.createElement('strong'); name.textContent = v.name;
