@@ -2,7 +2,7 @@
 
 가천대학교 교내 셔틀 무당이를 시뮬레이션으로 재현하고, AI공학관에서 만차인 무당이가 시간표를 기다리는 문제를 줄이는 출발 규칙을 비교한 스마트 교통물류 기말 프로젝트입니다.
 
-- 대시보드: https://seojin418-create.github.io/mudang-simulation/
+- 대시보드: https://seojin418-create.github.io/Mudang_Final/
 - 시나리오와 결과 요약: [SCENARIO.md](SCENARIO.md)
 - 도로·지도 자료 출처: [DATA_SOURCES.md](DATA_SOURCES.md)
 
